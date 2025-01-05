@@ -17,3 +17,4 @@ Use env variables:
 - `TSIG_HMAC`: TSIG HMAC algorithm, e.g. `hmac-sha256`
 - `TSIG_KEY`: TSIG key name
 - `TSIG_SECRET`: TSIG key secret (base64)
+- `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)

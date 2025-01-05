@@ -9,9 +9,10 @@ static SERVER: &str = env!("DNS_SERVER"); // DNS server to update
 static ZONE: &str = env!("DNS_ZONE"); // DNS zone to update (no trailing dot)
 static DOMAINS: &str = env!("DOMAINS"); // Comma-separated list of domains to update
 static TTL: Option<&str> = option_env!("TTL"); // TTL of the created A record (default 60)
-static TSIG_HMAC: &str = env!("TSIG_HMAC"); // TSIG HMAC algorithm, e.g. "hmac-sha256"
+static TSIG_HMAC: &str = env!("TSIG_HMAC"); // TSIG HMAC algorithm, e.g. `hmac-sha256`
 static TSIG_KEY: &str = env!("TSIG_KEY"); // TSIG key name
 static TSIG_SECRET: &str = env!("TSIG_SECRET"); // TSIG key secret (base64)
+static NSUPDATE: Option<&str> = option_env!("NSUPDATE"); // The `nsupdate` binary to use (default `nsupdate`)
 
 const ANSI_RED: &str = "\x1b[31m";
 const ANSI_GREEN: &str = "\x1b[32m";
@@ -51,6 +52,7 @@ fn main() -> Result<()> {
     } else {
         println!("  IPv6: n/a");
     }
+    println!();
 
     // Parse env variables
     let domains: Vec<&str> = DOMAINS.split(',').collect();
@@ -58,19 +60,22 @@ fn main() -> Result<()> {
         eprintln!("Warning: Failed to parse TTL: {:?}", e);
         60
     });
+    let nsupdate = NSUPDATE.unwrap_or("nsupdate");
 
-    println!("Running DNS zone update:");
+    println!("Running DNS zone update with '{nsupdate}':");
     println!("  Server: {SERVER}");
     println!("  Zone: {ZONE}");
     println!("  TSIG Key: {TSIG_KEY}");
     println!("  Domains: {domains:?}");
     println!("  TTL: {ttl}");
+    println!();
 
-    let mut child = Command::new("nsupdate")
+    let mut child = Command::new(nsupdate)
         .arg("-v")
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
-        .spawn()?;
+        .spawn()
+        .context(format!("Failed to spawn '{nsupdate}' child process"))?;
     {
         let mut stdin = child.stdin.take().expect("Failed to get stdin of child");
 
