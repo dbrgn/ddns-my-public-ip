@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.12", features = ["charset", "http2", "blocking", "rustls-tls-webpki-roots"], default-features = false }
