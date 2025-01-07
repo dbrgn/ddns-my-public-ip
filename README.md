@@ -18,3 +18,29 @@ Use env variables:
 - `TSIG_KEY`: TSIG key name
 - `TSIG_SECRET`: TSIG key secret (base64)
 - `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)
+
+
+## Use with NixOS (Flakes)
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    ddns-my-public-ip.url = "github:dbrgn/ddns-my-public-ip";
+  };
+  outputs = {nixpkgs, ddns-my-public-ip, ...}: {
+    nixosConfigurations.my-hostname = nixpkgs.lib.nixosSystem {
+      modules = [
+        ddns-my-public-ip.nixosModules.default
+        ({config, ...}: {
+          services.ddns-my-public-ip = {
+            enable = true;
+            domains = "a.example.com,b.example.com";
+            # ... TODO: Add config options sample from the module.
+          };
+        })
+      ];
+    };
+  };
+}
+```
