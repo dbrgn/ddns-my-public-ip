@@ -4,8 +4,8 @@ rustPlatform.buildRustPackage {
   version = "0.1.0";
   src = ./.;
   cargoLock.lockFile = ./Cargo.lock;
-  buildInputs = [ bind ]; # Dependency: nsupdate
-  shellHook = ''
-    export NSUPDATE="${bind}/nsupdate"
+  buildInputs = [ bind.dnsutils ]; # Dependency: nsupdate
+  preBuild = ''
+    export NSUPDATE="${bind.dnsutils}/bin/nsupdate"
   '';
 }
