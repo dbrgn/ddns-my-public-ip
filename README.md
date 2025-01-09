@@ -38,8 +38,15 @@ Runtime env variables:
         ({config, ...}: {
           services.ddns-my-public-ip = {
             enable = true;
-            domains = "a.example.com,b.example.com";
-            # ... TODO: Add config options sample from the module.
+
+            dnsServer = "example.com";
+            dnsZone = "site1.example.com";
+            domains = "ip.site1.example.com";
+            ttl = 60;
+            tsigHmac = "hmac-sha256";
+            tsigKey = "mykey";
+            tsigSecret = "dGVzdC10c2lnLXNlY3JldAo=";
+            timerInterval = "1min";
           };
         })
       ];

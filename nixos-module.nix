@@ -5,13 +5,14 @@ self:
   lib,
   ...
 }:
-let
-  cfg = config.ddns-my-public-ip;
-in
 with lib;
+let
+  cfg = config.services.ddns-my-public-ip;
+in
 {
+  # Define the options that can be set for this module
   options.services.ddns-my-public-ip = {
-    enable = mkEnableOption "DDNS My Public IP";
+    enable = mkEnableOption "ddns-my-public-ip";
     package = mkPackageOption pkgs "ddns-my-public-ip" { };
 
     dnsServer = mkOption {
@@ -24,53 +25,80 @@ with lib;
       description = "DNS zone to update (no trailing dot)";
       example = "site1.example.com";
     };
-    domains = mkOption {
+    domains = mkOption { # TODO make this a list
       type = types.str;
       description = "Comma-separated list of domains to update (no trailing dot)";
       example = "ip.site1.example.com,webcam.site1.example.com";
     };
-    environmentFile = mkOption {
-      description = ''
-        Path to an EnvironmentFile containing required environment
-        variables as per documentation.
-      '';
-      type = types.path;
+    ttl = mkOption {
+      type = types.int;
+      description = "TTL of the created A record (optional, default 60)";
+      default = 60;
+      example = 180;
+    };
+    tsigHmac = mkOption {
+      type = types.str;
+      description = "HMAC algorithm for TSIG authentication";
+      example = "hmac-sha256";
+    };
+    tsigKey = mkOption {
+      type = types.str;
+      description = "Key name for TSIG authentication";
+      example = "my-tsig-key";
+    };
+    tsigSecret = mkOption {
+      type = types.str;
+      description = "TSIG secret (base64-encoded)";
+      example = "c2VjcmV0c2VjcmV0OTM4NzQ5ODI3MzQ5ODcyMwo=";
+    };
+    timerInterval = mkOption {
+      type = types.str;
+      description = "How often to run the systemd timer?";
+      default = "5min";
+      example = "5min";
     };
   };
 
+  # Define what other settings and services should be active if a user enabled
+  # this module
   config = mkIf cfg.enable {
     nixpkgs.overlays = [ self.overlays.default ];
 
     systemd.services.ddns-my-public-ip = {
-      # TODO: Full service configuration (run after network-online, etc etc).
-      #       See https://search.nixos.org/options?channel=24.11&from=0&size=100&sort=relevance&type=packages&query=systemd.services.%3Cname%3E
-      #       Example here (not oneShot, but otherwise nice with temp. user): https://github.com/zhaofengli/attic/blob/main/nixos/atticd.nix#L200
-      description = "";
+      description = "A service that updates one or more domains on a DNS server with your public IP";
       wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
 
       environment = {
         DNS_SERVER = cfg.dnsServer;
         DNS_ZONE = cfg.dnsZone;
         DOMAINS = cfg.domains;
+        TTL = toString cfg.ttl;
+        TSIG_HMAC = cfg.tsigHmac;
+        TSIG_KEY = cfg.tsigKey;
+        TSIG_SECRET = cfg.tsigSecret;
       };
 
       serviceConfig = {
-        ExecStart = "${getExe cfg.package}";
-        EnvironmentFile = cfg.environmentFile;
+        Type = "oneshot";
+        ExecStart = "${cfg.package}/bin/ddns-my-public-ip";
       };
     };
 
     systemd.timers.ddns-my-public-ip = {
-      # TODO: See https://search.nixos.org/options?channel=24.11&from=0&size=100&sort=relevance&type=packages&query=systemd.timer
-      description = "";
+      description = "Periodically run ddns-my-public-ip";
       wantedBy = [ "timers.target" ];
+
       timerConfig = {
-        OnCalendar = cfg.startAt; # TODO: Config option?
+        # Run 10s after boot
+        OnBootSec = "10s";
+        # Run periodically according to config
+        OnUnitActiveSec = cfg.timerInterval;
       };
 
       # Wait for network before running
-      after = "network-online.target";
-      wants = "network-online.target";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
     };
   };
 }
