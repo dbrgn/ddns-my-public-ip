@@ -8,7 +8,11 @@ used, thanks!
 
 ## Config
 
-Use env variables:
+Buildtime env variables:
+
+- `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)
+
+Runtime env variables:
 
 - `DNS_SERVER`: DNS server to update
 - `DNS_ZONE`: DNS zone to update (no trailing dot)
@@ -17,7 +21,6 @@ Use env variables:
 - `TSIG_HMAC`: TSIG HMAC algorithm, e.g. `hmac-sha256`
 - `TSIG_KEY`: TSIG key name
 - `TSIG_SECRET`: TSIG key secret (base64)
-- `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)
 
 
 ## Use with NixOS (Flakes)

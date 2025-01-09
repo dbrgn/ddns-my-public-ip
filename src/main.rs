@@ -5,13 +5,6 @@ use std::{
 
 use anyhow::{Context, Result};
 
-static SERVER: &str = env!("DNS_SERVER"); // DNS server to update
-static ZONE: &str = env!("DNS_ZONE"); // DNS zone to update (no trailing dot)
-static DOMAINS: &str = env!("DOMAINS"); // Comma-separated list of domains to update
-static TTL: Option<&str> = option_env!("TTL"); // TTL of the created A record (default 60)
-static TSIG_HMAC: &str = env!("TSIG_HMAC"); // TSIG HMAC algorithm, e.g. `hmac-sha256`
-static TSIG_KEY: &str = env!("TSIG_KEY"); // TSIG key name
-static TSIG_SECRET: &str = env!("TSIG_SECRET"); // TSIG key secret (base64)
 static NSUPDATE: Option<&str> = option_env!("NSUPDATE"); // The `nsupdate` binary to use (default `nsupdate`)
 
 const ANSI_RED: &str = "\x1b[31m";
@@ -43,7 +36,79 @@ fn fetch_public_ip() -> Result<PublicIps> {
     Ok(PublicIps { v4: ipv4, v6: ipv6 })
 }
 
+/// Return env variable [`name`]. If it is not defined, fall back to
+/// [`default`]. If no default is passed in, an error will be printed and the
+/// program will abort.
+fn get_var(name: &str, default: Option<&str>) -> String {
+    match (std::env::var(name), default) {
+        (Ok(val), _) => val,
+        (Err(_), Some(val)) => val.to_string(),
+        (Err(_), None) => {
+            eprintln!("{ANSI_RED}Missing environment variable: {name}{ANSI_RESET}");
+            std::process::exit(1);
+        }
+    }
+}
+
+struct Config {
+    /// The `nsupdate` compatible binary to use
+    nsupdate: &'static str,
+    /// DNS server to update
+    server: String,
+    /// DNS zone to update (no trailing dot)
+    zone: String,
+    /// Comma-separated list of domains to update
+    domains: Vec<String>,
+    /// TTL of the created A record (default 60)
+    ttl: usize,
+    /// TSIG HMAC algorithm, e.g. `hmac-sha256`
+    tsig_hmac: String,
+    /// TSIG key name
+    tsig_key: String,
+    /// TSIG key secret (base64)
+    tsig_secret: String,
+}
+
+fn get_config() -> Config {
+    // Get runtime variables
+    let server = get_var("DNS_SERVER", None);
+    let zone = get_var("DNS_ZONE", None);
+    let domains = get_var("DOMAINS", None);
+    let ttl = get_var("TTL", Some("60"));
+    let tsig_hmac = get_var("TSIG_HMAC", None);
+    let tsig_key = get_var("TSIG_KEY", None);
+    let tsig_secret = get_var("TSIG_SECRET", None);
+
+    // Get compile time variables
+    let nsupdate = NSUPDATE.unwrap_or("nsupdate");
+
+    // Parse string values
+    let parsed_domains: Vec<String> = domains.split(',').map(String::from).collect();
+    let parsed_ttl: usize = ttl.parse().unwrap_or_else(|_| {
+        eprintln!(
+            "{ANSI_YELLOW}Note: Failed to parse TTL {:?} as number, falling back to default value{ANSI_RESET}",
+            ttl
+        );
+        60
+    });
+
+    Config {
+        nsupdate,
+        server,
+        zone,
+        domains: parsed_domains,
+        ttl: parsed_ttl,
+        tsig_hmac,
+        tsig_key,
+        tsig_secret,
+    }
+}
+
 fn main() -> Result<()> {
+    // Get config from env
+    let config = get_config();
+
+    // Fetch public IPs
     let ips = fetch_public_ip()?;
     println!("Fetched own public IP:");
     println!("  IPv4: {}", ips.v4);
@@ -54,39 +119,46 @@ fn main() -> Result<()> {
     }
     println!();
 
-    // Parse env variables
-    let domains: Vec<&str> = DOMAINS.split(',').collect();
-    let ttl: usize = TTL.unwrap_or("60").parse().unwrap_or_else(|e| {
-        eprintln!("Warning: Failed to parse TTL: {:?}", e);
-        60
-    });
-    let nsupdate = NSUPDATE.unwrap_or("nsupdate");
-
-    println!("Running DNS zone update with '{nsupdate}':");
-    println!("  Server: {SERVER}");
-    println!("  Zone: {ZONE}");
-    println!("  TSIG Key: {TSIG_KEY}");
-    println!("  Domains: {domains:?}");
-    println!("  TTL: {ttl}");
+    println!("Running DNS zone update with '{}':", config.nsupdate);
+    println!("  Server: {}", config.server);
+    println!("  Zone: {}", config.zone);
+    println!("  TSIG Key: {}", config.tsig_key);
+    println!("  Domains: {:?}", config.domains);
+    println!("  TTL: {}", config.ttl);
     println!();
 
-    let mut child = Command::new(nsupdate)
+    let mut child = Command::new(config.nsupdate)
         .arg("-v")
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .spawn()
-        .context(format!("Failed to spawn '{nsupdate}' child process"))?;
+        .context(format!(
+            "Failed to spawn '{}' child process",
+            config.nsupdate
+        ))?;
     {
         let mut stdin = child.stdin.take().expect("Failed to get stdin of child");
 
+        // Destructure config
+        let Config {
+            server,
+            zone,
+            domains,
+            ttl,
+            tsig_hmac,
+            tsig_key,
+            tsig_secret,
+            ..
+        } = config;
+
         // Authenticate
-        stdin.write_all(format!("key {TSIG_HMAC}:{TSIG_KEY} {TSIG_SECRET}\n").as_bytes())?;
+        stdin.write_all(format!("key {tsig_hmac}:{tsig_key} {tsig_secret}\n").as_bytes())?;
 
         // Connect to server
-        stdin.write_all(format!("server {SERVER}\n").as_bytes())?;
+        stdin.write_all(format!("server {server}\n").as_bytes())?;
 
         // Select zone
-        stdin.write_all(format!("zone {ZONE}.\n").as_bytes())?;
+        stdin.write_all(format!("zone {zone}.\n").as_bytes())?;
 
         // Update IPv4
         for domain in &domains {

@@ -6,7 +6,6 @@ rustPlatform.buildRustPackage {
   cargoLock.lockFile = ./Cargo.lock;
   buildInputs = [ bind ]; # Dependency: nsupdate
   shellHook = ''
-    export NSUPDATE="${bind}"
-    export DNS_SERVER="${bind}"
+    export NSUPDATE="${bind}/nsupdate"
   '';
 }
