@@ -41,7 +41,7 @@ Runtime env variables:
 
             dnsServer = "example.com";
             dnsZone = "site1.example.com";
-            domains = "ip.site1.example.com";
+            domains = ["ip.site1.example.com" "webcam.site1.example.com"];
             ttl = 60;
             tsigHmac = "hmac-sha256";
             tsigKey = "mykey";

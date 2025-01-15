@@ -25,10 +25,10 @@ in
       description = "DNS zone to update (no trailing dot)";
       example = "site1.example.com";
     };
-    domains = mkOption { # TODO make this a list
-      type = types.str;
-      description = "Comma-separated list of domains to update (no trailing dot)";
-      example = "ip.site1.example.com,webcam.site1.example.com";
+    domains = mkOption {
+      type = types.listOf types.str;
+      description = "List of domains to update (no trailing dot)";
+      example = ["ip.site1.example.com" "webcam.site1.example.com"];
     };
     ttl = mkOption {
       type = types.int;
@@ -72,7 +72,7 @@ in
       environment = {
         DNS_SERVER = cfg.dnsServer;
         DNS_ZONE = cfg.dnsZone;
-        DOMAINS = cfg.domains;
+        DOMAINS = concatStringsSep "," cfg.domains;
         TTL = toString cfg.ttl;
         TSIG_HMAC = cfg.tsigHmac;
         TSIG_KEY = cfg.tsigKey;
