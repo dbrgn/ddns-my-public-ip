@@ -8,7 +8,11 @@ used, thanks!
 
 ## Config
 
-Use env variables:
+Buildtime env variables:
+
+- `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)
+
+Runtime env variables:
 
 - `DNS_SERVER`: DNS server to update
 - `DNS_ZONE`: DNS zone to update (no trailing dot)
@@ -17,4 +21,36 @@ Use env variables:
 - `TSIG_HMAC`: TSIG HMAC algorithm, e.g. `hmac-sha256`
 - `TSIG_KEY`: TSIG key name
 - `TSIG_SECRET`: TSIG key secret (base64)
-- `NSUPDATE`: The `nsupdate` binary to use (default `nsupdate`)
+
+
+## Use with NixOS (Flakes)
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    ddns-my-public-ip.url = "github:dbrgn/ddns-my-public-ip";
+  };
+  outputs = {nixpkgs, ddns-my-public-ip, ...}: {
+    nixosConfigurations.my-hostname = nixpkgs.lib.nixosSystem {
+      modules = [
+        ddns-my-public-ip.nixosModules.default
+        ({config, ...}: {
+          services.ddns-my-public-ip = {
+            enable = true;
+
+            dnsServer = "example.com";
+            dnsZone = "site1.example.com";
+            domains = ["ip.site1.example.com" "webcam.site1.example.com"];
+            ttl = 60;
+            tsigHmac = "hmac-sha256";
+            tsigKey = "mykey";
+            tsigSecret = "dGVzdC10c2lnLXNlY3JldAo=";
+            timerInterval = "1min";
+          };
+        })
+      ];
+    };
+  };
+}
+```
