@@ -86,7 +86,7 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${cfg.package}/bin/ddns-my-public-ip";
-        EnvironmentFile = [ tsigSecretFile ];
+        EnvironmentFile = [ cfg.tsigSecretFile ];
       };
     };
 

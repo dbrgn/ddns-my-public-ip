@@ -48,7 +48,9 @@ Runtime env variables:
             ttl = 60;
             tsigHmac = "hmac-sha256";
             tsigKey = "mykey";
-            tsigSecret = "dGVzdC10c2lnLXNlY3JldAo=";
+            tsigSecretFile = "${pkgs.writeText "ddns-tsig-secret" ''
+              TSIG_SECRET=dGVzdC10c2lnLXNlY3JldAo=
+            ''}";
             timerInterval = "1min";
           };
         })
