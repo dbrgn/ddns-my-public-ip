@@ -46,10 +46,12 @@ in
       description = "Key name for TSIG authentication";
       example = "my-tsig-key";
     };
-    tsigSecret = mkOption {
+    tsigSecretFile = mkOption {
       type = types.str;
-      description = "TSIG secret (base64-encoded)";
-      example = "c2VjcmV0c2VjcmV0OTM4NzQ5ODI3MzQ5ODcyMwo=";
+      description = "Path to EnvironmentFile with TSIG_SECRET env variable (base64-encoded)";
+      example = ''
+        Path to file containing `TSIG_SECRET="c2VjcmV0c2VjcmV0OTM4NzQ5ODI3MzQ5ODcyMwo="`
+      '';
     };
     timerInterval = mkOption {
       type = types.str;
@@ -76,12 +78,12 @@ in
         TTL = toString cfg.ttl;
         TSIG_HMAC = cfg.tsigHmac;
         TSIG_KEY = cfg.tsigKey;
-        TSIG_SECRET = cfg.tsigSecret;
       };
 
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${cfg.package}/bin/ddns-my-public-ip";
+        EnvironmentFile = [ tsigSecretFile ];
       };
     };
 
