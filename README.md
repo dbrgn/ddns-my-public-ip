@@ -29,7 +29,10 @@ Runtime env variables:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
-    ddns-my-public-ip.url = "github:dbrgn/ddns-my-public-ip";
+    ddns-my-public-ip = {
+      url = "github:dbrgn/ddns-my-public-ip";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = {nixpkgs, ddns-my-public-ip, ...}: {
     nixosConfigurations.my-hostname = nixpkgs.lib.nixosSystem {
