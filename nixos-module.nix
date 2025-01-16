@@ -28,7 +28,10 @@ in
     domains = mkOption {
       type = types.listOf types.str;
       description = "List of domains to update (no trailing dot)";
-      example = ["ip.site1.example.com" "webcam.site1.example.com"];
+      example = [
+        "ip.site1.example.com"
+        "webcam.site1.example.com"
+      ];
     };
     ttl = mkOption {
       type = types.int;
