@@ -85,10 +85,7 @@ fn get_config() -> Config {
     // Parse string values
     let parsed_domains: Vec<String> = domains.split(',').map(String::from).collect();
     let parsed_ttl: usize = ttl.parse().unwrap_or_else(|_| {
-        eprintln!(
-            "{ANSI_YELLOW}Note: Failed to parse TTL {:?} as number, falling back to default value{ANSI_RESET}",
-            ttl
-        );
+        eprintln!("{ANSI_YELLOW}Note: Failed to parse TTL {ttl:?} as number, falling back to default value{ANSI_RESET}");
         60
     });
 
@@ -171,7 +168,7 @@ fn main() -> Result<()> {
             stdin.write_all(format!("update delete {domain}. in AAAA\n").as_bytes())?;
             if let Some(ref ipv6) = ips.v6 {
                 stdin.write_all(
-                    format!("update add {domain}. {ttl} in AAAA {}\n", ipv6).as_bytes(),
+                    format!("update add {domain}. {ttl} in AAAA {ipv6}\n").as_bytes(),
                 )?;
             }
         }
